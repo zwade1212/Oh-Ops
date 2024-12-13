@@ -1,0 +1,49 @@
+
+pipeline {
+    agent { label 'aws-jenkins-slave' }
+
+    environment{
+        lark_jenkins_token = credentials('lark-jenkins')
+    }
+    
+    parameters {
+        extendedChoice(
+            name: 'Purge_Domains',          // Parameter name
+            description: '选择刷新CDN的域名，支持多选',      // Parameter description
+            multiSelectDelimiter: ',',            // Delimiter for multiple selections
+            type: 'PT_CHECKBOX',                  // Parameter type (use PT_CHECKBOX for checkbox selection)
+            value: 'a.com, b.com, c.net'
+        )
+    }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                script {
+                    if (params.Purge_Domains) {
+                        def quotedDomains = params.Purge_Domains.split(',').collect { "\"${it}\"" }.join(',')
+                        echo "Selected Domains: ${quotedDomains}"
+                        sh "/home/jenkins/pyenv/bin/python /home/jenkins/scripts/flush_cdn.py ${quotedDomains} "
+                    } else {
+                        echo "No Domain selected."
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                sh """
+                        /home/jenkins/pyenv/bin/python /home/jenkins/scripts/jenkins_notify.py \
+                        --JOB_NAME=\"${env.JOB_NAME}\"  --BUILD_URL=${env.BUILD_URL}console \
+                        --USER=\"${BUILD_USER_ID}\"  \
+                        --BRANCH=\"${params.Purge_Domains}\" --BUILD_STAGE='finish building' \
+                        --DURATION=\"${currentBuild.durationString.replace(' and counting', '')}\" \
+                        --STATUS=${currentBuild.currentResult} """ + ' --WEBHOOK_URL=$lark_jenkins_token'
+            }
+        }
+    }
+
+}
