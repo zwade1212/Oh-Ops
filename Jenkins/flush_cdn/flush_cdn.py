@@ -23,8 +23,8 @@ cloudfront_domains = {
                      }
 
 # Cloudflare API credentials
-cloudflare_email = 'zhaoruwei@luckybus.me'
-cloudflare_api_key = '1d1df5758aead11bbda59a16b08e861b48aed'
+cloudflare_email = 'xxx.com'
+cloudflare_api_key = '1d1df5758xxxxx'
 
 def refresh_cloudfront(domain):
     ts = int(time.time())
